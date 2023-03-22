@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, AttachmentBuilder } from "discord.js";
 import axios from "axios";
 config();
 
@@ -35,28 +35,56 @@ client.on("messageCreate", async (message) => {
       !!message.mentions.users.find((user) => user.username === "chat-GPT");
 
     if (forGpt) {
-      console.log(`Accessing chatGPT`);
-      const response = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "user",
-              content: message.content.replace(/<[@#!&](.*?)>/g, ""),
-            },
-          ],
-          temperature: 0.7,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.OPENAI_TOKEN}`,
-            "Content-Type": "application/json",
+      console.log(`Accessing ChatGPT`, message);
+      if (message.content.includes("!!image")) {
+        const response = await axios.post(
+          "https://api.openai.com/v1/images/generations",
+          {
+            prompt: message.content
+              .replace(/<[@#!&](.*?)>/g, "")
+              .replace(/\!\!image/g, ""),
+            n: 1,
+            size: "1024x1024",
+            response_format: "url",
           },
-        }
-      );
-      console.log(`Received response`);
-      await message.reply(response.data.choices[0]?.message?.content);
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.OPENAI_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        console.log(`Received response as image`);
+        const attachment = new AttachmentBuilder(
+          response.data.data[0].url
+        ).setName("temp.png");
+        await message.reply({
+          files: [attachment],
+          content: "Here is your image",
+        });
+      } else {
+        const response = await axios.post(
+          "https://api.openai.com/v1/chat/completions",
+          {
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "user",
+                content: message.content.replace(/<[@#!&](.*?)>/g, ""),
+              },
+            ],
+            temperature: 0.7,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.OPENAI_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        console.log(`Received response as text`);
+        await message.reply(response.data.choices[0]?.message?.content);
+      }
     } else {
       await message.reply(
         "If you want to access chatGPT, please mention me in the message"
