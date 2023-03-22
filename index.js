@@ -35,7 +35,7 @@ client.on("messageCreate", async (message) => {
       !!message.mentions.users.find((user) => user.username === "chat-GPT");
 
     if (forGpt) {
-      console.log(`Accessing chatGPT`, message);
+      console.log(`Accessing ChatGPT`, message);
       if (message.content.includes("!!image")) {
         const response = await axios.post(
           "https://api.openai.com/v1/images/generations",
